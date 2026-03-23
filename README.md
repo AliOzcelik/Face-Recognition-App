@@ -103,7 +103,6 @@ face_recognition_app/
 | `PATCH` | `/persons/{old_name}` | Rename a person |
 | `POST` | `/recognize` | Recognize faces in an uploaded image |
 
-Full documentation: see [API_DOCS.md](API_DOCS.md).
 
 ---
 
