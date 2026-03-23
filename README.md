@@ -28,12 +28,6 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Install FastAPI and its server separately (not in requirements.txt yet):
-
-```bash
-pip install fastapi uvicorn sqlalchemy
-```
-
 > **GPU users:** Install the CUDA-enabled version of PyTorch from [pytorch.org](https://pytorch.org/get-started/locally/) before running `pip install -r requirements.txt`.
 > The app auto-detects CUDA — no manual configuration needed.
 
