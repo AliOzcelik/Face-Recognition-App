@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Face Recognition Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: sans-serif;
+            background: #111;
+            color: #eee;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+            gap: 24px;
+        }
+
+        h1 { font-size: 1.4rem; color: #fff; }
+
+        /* ── Layout ── */
+        .main-grid {
+            display: flex;
+            gap: 24px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .left  { display: flex; flex-direction: column; gap: 16px; flex: 1; }
+        .right { display: flex; flex-direction: column; gap: 16px; width: 280px; }
+
+        /* ── Webcam ── */
+        .webcam-box {
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #video, #overlay {
+            width: 100%;
+            display: block;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0; left: 0;
+            pointer-events: none;
+        }
+
+        /* ── Buttons ── */
+        .btn-row { display: flex; gap: 8px; }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .btn-primary   { background: #3b82f6; color: #fff; }
+        .btn-danger    { background: #ef4444; color: #fff; }
+        .btn-success   { background: #22c55e; color: #000; }
+        .btn-secondary { background: #374151; color: #eee; }
+
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ── Cards ── */
+        .card {
+            background: #1f2937;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card h2 { font-size: 0.95rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        input[type="text"] {
+            padding: 8px 10px;
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+
+        /* ── Results list ── */
+        #result-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        #result-list li {
+            background: #111827;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .confidence { color: #22c55e; }
+        .unknown    { color: #ef4444; }
+
+        /* ── Persons list ── */
+        #persons-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        #persons-list li {
+            background: #111827;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #persons-list li button { padding: 2px 8px; font-size: 0.75rem; }
+
+        /* ── Toast ── */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1f2937;
+            border: 1px solid #374151;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        #toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<h1>Face Recognition Dashboard</h1>
+
+<div class="main-grid">
+
+    <!-- LEFT: webcam + controls -->
+    <div class="left">
+
+        <div class="webcam-box">
+            <video id="video" width="640" height="480" autoplay playsinline></video>
+            <canvas id="overlay" width="640" height="480"></canvas>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn-success"  id="btn-start"               >Start Webcam</button>
+            <button class="btn-primary"  id="btn-recognize"  disabled >Recognize</button>
+            <button class="btn-success"  id="btn-capture"    disabled >Capture for Register</button>
+            <button class="btn-secondary" id="btn-clear"     disabled >Clear</button>
+        </div>
+        <div id="webcam-status" style="font-size:0.8rem; color:#6b7280;">Webcam not started.</div>
+
+        <!-- Recognition results -->
+        <div class="card">
+            <h2>Recognition Results</h2>
+            <ul id="result-list"><li style="color:#6b7280">No results yet.</li></ul>
+        </div>
+
+    </div>
+
+    <!-- RIGHT: register + persons list -->
+    <div class="right">
+
+        <!-- Register -->
+        <div class="card">
+            <h2>Register Face</h2>
+            <input type="text" id="register-name" placeholder="Enter name" />
+            <canvas id="capture-preview" width="260" height="195"
+                    style="border-radius:6px; background:#111827; display:block;"></canvas>
+            <button class="btn-success" id="btn-register" disabled>Register</button>
+        </div>
+
+        <!-- Persons list -->
+        <div class="card">
+            <h2>Registered Persons</h2>
+            <button class="btn-secondary" id="btn-refresh" style="align-self:flex-start">Refresh</button>
+            <ul id="persons-list"><li style="color:#6b7280">Loading...</li></ul>
+        </div>
+
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+    const API = 'http://localhost:8000';
+
+    // ── Webcam setup ──────────────────────────────────────────────
+    const video   = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const ctx     = overlay.getContext('2d');
+
+    const statusEl = document.getElementById('webcam-status');
+
+    function setWebcamStatus(msg, color = '#6b7280') {
+        statusEl.textContent = msg;
+        statusEl.style.color = color;
+    }
+
+    function enableControls(on) {
+        ['btn-recognize', 'btn-capture', 'btn-clear'].forEach(id => {
+            document.getElementById(id).disabled = !on;
+        });
+        document.getElementById('btn-start').disabled = on;
+    }
+
+    document.getElementById('btn-start').addEventListener('click', async () => {
+        setWebcamStatus('Contacting backend…', '#facc15');
+        try {
+            const res  = await fetch(`${API}/webcam/start`, { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) {
+                setWebcamStatus('Backend not ready: ' + (data.detail || 'unknown error'), '#ef4444');
+                toast('Backend not ready', true);
+                return;
+            }
+        } catch (e) {
+            setWebcamStatus('Cannot reach backend.', '#ef4444');
+            toast('Backend unreachable', true);
+            return;
+        }
+
+        setWebcamStatus('Requesting camera access…', '#facc15');
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            video.srcObject = stream;
+            setWebcamStatus('Webcam started.', '#22c55e');
+            enableControls(true);
+            toast('Webcam started');
+        } catch (err) {
+            setWebcamStatus('Camera access denied: ' + err.message, '#ef4444');
+            toast('Camera access denied', true);
+        }
+    });
+
+    // ── Toast ─────────────────────────────────────────────────────
+    function toast(msg, isError = false) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.style.borderColor = isError ? '#ef4444' : '#22c55e';
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    // ── Capture a frame as Blob ───────────────────────────────────
+    function captureFrame(targetCanvas) {
+        const w = targetCanvas.width, h = targetCanvas.height;
+        const c = targetCanvas.getContext('2d');
+        c.drawImage(video, 0, 0, w, h);
+    }
+
+    function canvasToBlob(canvas) {
+        return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+    }
+
+    // ── Draw bounding boxes ───────────────────────────────────────
+    function drawResults(results) {
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        const scaleX = overlay.width  / video.videoWidth;
+        const scaleY = overlay.height / video.videoHeight;
+
+        results.forEach(r => {
+            const [x1, y1, x2, y2] = r.bbox;
+            const color  = r.name === 'Unknown' ? '#ef4444' : '#22c55e';
+            const label  = r.name === 'Unknown' ? 'Unknown' : `${r.name} (${(r.confidence * 100).toFixed(0)}%)`;
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth   = 2;
+            ctx.strokeRect(x1 * scaleX, y1 * scaleY, (x2 - x1) * scaleX, (y2 - y1) * scaleY);
+
+            ctx.fillStyle = color;
+            ctx.font      = '14px sans-serif';
+            ctx.fillText(label, x1 * scaleX, y1 * scaleY - 6);
+        });
+    }
+
+    // ── Recognize ─────────────────────────────────────────────────
+    document.getElementById('btn-recognize').addEventListener('click', async () => {
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = video.videoWidth; tmpCanvas.height = video.videoHeight;
+        captureFrame(tmpCanvas);
+        const blob = await canvasToBlob(tmpCanvas);
+
+        const form = new FormData();
+        form.append('file', blob, 'frame.jpg');
+
+        try {
+            const res  = await fetch(`${API}/recognize`, { method: 'POST', body: form });
+            const data = await res.json();
+
+            if (!res.ok) { toast(data.detail || 'Recognition failed', true); return; }
+
+            // update results list
+            const list = document.getElementById('result-list');
+            list.innerHTML = data.map(r => `
+                <li>
+                    <span class="${r.name === 'Unknown' ? 'unknown' : ''}">${r.name}</span>
+                    <span class="confidence">${r.name !== 'Unknown' ? (r.confidence * 100).toFixed(1) + '%' : ''}</span>
+                </li>`).join('');
+
+            drawResults(data);
+        } catch (e) { toast('Server unreachable', true); }
+    });
+
+    // ── Capture preview for registration ─────────────────────────
+    const preview = document.getElementById('capture-preview');
+
+    document.getElementById('btn-capture').addEventListener('click', () => {
+        captureFrame(preview);
+        document.getElementById('btn-register').disabled = false;
+        toast('Frame captured — enter a name and click Register');
+    });
+
+    // ── Register face ─────────────────────────────────────────────
+    document.getElementById('btn-register').addEventListener('click', async () => {
+        const name = document.getElementById('register-name').value.trim();
+        if (!name) { toast('Enter a name first', true); return; }
+
+        const blob = await canvasToBlob(preview);
+        const form = new FormData();
+        form.append('name', name);
+        form.append('file', blob, 'register.jpg');
+
+        try {
+            const res  = await fetch(`${API}/persons/register_face`, { method: 'POST', body: form });
+            const data = await res.json();
+
+            if (!res.ok) { toast(data.detail || 'Registration failed', true); return; }
+
+            toast(data.message);
+            document.getElementById('register-name').value = '';
+            document.getElementById('btn-register').disabled = true;
+            preview.getContext('2d').clearRect(0, 0, preview.width, preview.height);
+            loadPersons();
+        } catch (e) { toast('Server unreachable', true); }
+    });
+
+    // ── Clear overlay ─────────────────────────────────────────────
+    document.getElementById('btn-clear').addEventListener('click', () => {
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        document.getElementById('result-list').innerHTML = '<li style="color:#6b7280">No results yet.</li>';
+    });
+
+    // ── Load persons list ─────────────────────────────────────────
+    async function loadPersons() {
+        try {
+            const res   = await fetch(`${API}/persons`);
+            const names = await res.json();
+            const list  = document.getElementById('persons-list');
+
+            if (!names.length) {
+                list.innerHTML = '<li style="color:#6b7280">No persons registered.</li>';
+                return;
+            }
+
+            list.innerHTML = names.map(name => `
+                <li>
+                    <span>${name}</span>
+                    <button class="btn-danger" onclick="deletePerson('${name}')">Delete</button>
+                </li>`).join('');
+        } catch (e) { toast('Could not load persons', true); }
+    }
+
+    // ── Delete person ─────────────────────────────────────────────
+    async function deletePerson(name) {
+        if (!confirm(`Delete ${name}?`)) return;
+        try {
+            const res  = await fetch(`${API}/persons/delete_face/${encodeURIComponent(name)}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) { toast(data.detail || 'Delete failed', true); return; }
+            toast(data.message);
+            loadPersons();
+        } catch (e) { toast('Server unreachable', true); }
+    }
+
+    document.getElementById('btn-refresh').addEventListener('click', loadPersons);
+
+    // initial load
+    loadPersons();
+</script>
+
+</body>
+</html>

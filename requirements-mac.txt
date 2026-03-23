@@ -1,0 +1,7 @@
+opencv-python>=4.8.0
+numpy>=1.24.0
+insightface>=0.7.3
+onnxruntime-silicon
+sqlalchemy
+fastapi
+#torch>=2.0.0
