@@ -4,4 +4,5 @@ insightface>=0.7.3
 onnxruntime-silicon
 sqlalchemy
 fastapi
-#torch>=2.0.0
+uvicorn
+torch>=2.0.0
