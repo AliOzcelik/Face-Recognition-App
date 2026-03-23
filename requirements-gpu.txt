@@ -4,4 +4,5 @@ insightface>=0.7.3
 onnxruntime-gpu>=1.16.0
 sqlalchemy
 fastapi
+uvicorn
 #torch>=2.0.0
